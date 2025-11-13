@@ -1,7 +1,4 @@
-# main.py
-from http.client import HTTPException
-
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from sqlmodel import Session, select
 from typing import List
 
@@ -78,4 +75,35 @@ def quiz_by_id(id: int,
     if not quiz:
         # 4. Jeśli nie, zwracamy standardowy błąd 404 Not Found
         raise HTTPException(status_code=404, detail="Quiz not found")
+    return quiz
+
+@app.delete("/quizes/remove/{id}", response_model=QuestionsSetRead)
+def quiz_by_id(id: int,
+        session: Session = Depends(get_session)):
+    quiz = session.get(QuestionsSet, id)
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+
+    session.delete(quiz)
+    session.commit()
+    return quiz
+
+@app.put("/quizes/{id}", response_model=QuestionsSetRead)
+def update_quiz_title(id: int, name: str, session: Session = Depends(get_session)):
+    # Pobierz quiz z bazy
+    quiz = session.get(QuestionsSet, id)
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+
+    # Zmodyfikuj tytuł
+    quiz.title = name
+
+    # Dodaj do sesji i zapisz zmiany
+    session.add(quiz)
+    session.commit()
+
+    # Odśwież obiekt, aby pobrać najnowsze dane z bazy
+    session.refresh(quiz)
+
+    # Zwróć zaktualizowany obiekt - to jest kluczowe dla response_model!
     return quiz
